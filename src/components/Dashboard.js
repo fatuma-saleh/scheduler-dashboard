@@ -8,6 +8,8 @@ import Panel from "./Panel";
 
 import axios from "axios";
 
+import { setInterview } from "helpers/reducers";
+
 import {
   getTotalInterviews,
   getLeastPopularTimeSlot,
@@ -19,17 +21,17 @@ const data = [
   {
     id: 1,
     label: "Total Interviews",
-    getValue:getTotalInterviews
+    getValue: getTotalInterviews,
   },
   {
     id: 2,
     label: "Least Popular Time Slot",
-    getValue:getLeastPopularTimeSlot 
+    getValue: getLeastPopularTimeSlot,
   },
   {
     id: 3,
     label: "Most Popular Day",
-    getValue:getMostPopularDay,
+    getValue: getMostPopularDay,
   },
   {
     id: 4,
@@ -65,12 +67,28 @@ class Dashboard extends Component {
         interviewers: interviewers.data,
       });
     });
+
+    this.socket = new WebSocket(process.env.REACT_APP_WEBSOCKET_URL);
+
+    this.socket.onmessage = event => {
+      const data = JSON.parse(event.data);
+    
+      if (typeof data === "object" && data.type === "SET_INTERVIEW") {
+        this.setState(previousState =>
+          setInterview(previousState, data.id, data.interview)
+        );
+      }
+    };
   }
 
   componentDidUpdate(previousProps, previousState) {
     if (previousState.focused !== this.state.focused) {
       localStorage.setItem("focused", JSON.stringify(this.state.focused));
     }
+  }
+
+  componentWillUnmount() {
+    this.socket.close();
   }
 
   selectPanel(id) {
@@ -96,8 +114,8 @@ class Dashboard extends Component {
           key={panel.id}
           id={panel.id}
           label={panel.label}
-         // value={panel.value}
-         value={panel.getValue(this.state)}
+          // value={panel.value}
+          value={panel.getValue(this.state)}
           onSelect={() => this.selectPanel(panel.id)}
         />
       ));
